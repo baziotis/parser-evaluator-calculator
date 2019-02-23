@@ -94,7 +94,7 @@ int apply_op(char op, int l, int r) {
         case '+': asm("addl %0, %%ebx; movl %%ebx, %%eax;" : : "r" (r)); break;
         case '-': asm("subl %0, %%ebx; movl %%ebx, %%eax;" : : "r" (r)); break;
         case '*': asm("imul %0, %%ebx; movl %%ebx, %%eax;" : : "r" (r)); break;
-		default: asm("movl %0, %%ecx; movl %%ebx, %%eax; cdq; idiv %%ecx;" : : "r" (r));
+        default: asm("movl %0, %%ecx; movl %%ebx, %%eax; cdq; idiv %%ecx;" : : "r" (r));
     }
 }
 
