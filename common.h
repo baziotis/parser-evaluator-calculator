@@ -1,6 +1,8 @@
 #pragma once
 
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 
 #define global_variable static;
@@ -27,3 +29,7 @@ typedef struct {
         const char *name;
     };
 } Token;
+
+void *smalloc(size_t);
+void fatal(const char *, ...);
+void next_token(void);

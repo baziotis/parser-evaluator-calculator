@@ -22,11 +22,11 @@ Grammar:
 // TODO(stefanos): token_kind_name.
 
 //////////// UTILITY FUNCTIONS ////////////
-inline bool is_token(TokenKind kind) {
+bool is_token(TokenKind kind) {
     return token.kind == kind;
 }
 
-inline bool match_token(TokenKind kind) {
+bool match_token(TokenKind kind) {
     if (is_token(kind)) {
         next_token();
         return true;
@@ -36,7 +36,7 @@ inline bool match_token(TokenKind kind) {
     }
 }
 
-inline bool expect_token(TokenKind kind) {
+bool expect_token(TokenKind kind) {
     if (is_token(kind)) {
         next_token();
         return true;
@@ -86,21 +86,15 @@ bool token_is_one_of(TokenKind kinds[], size_t num_tokens) {
     return false;
 }
 
-// binary operators
-inline int add_op(int l, int r) { return l + r; }
-inline int sub_op(int l, int r) { return l - r; }
-inline int mul_op(int l, int r) { return l * r; }
-inline int div_op(int l, int r) { return l / r; }
-
-typedef int(*op_func_type_t)(int, int);
-
+// IMPORTANT(stefanos): GCC-ONLY!!!!!!
 // return the operator function depending on the operator
-op_func_type_t op_func(char op) {
+int apply_op(char op, int l, int r) {
+	asm("movl %0, %%ebx;" : : "l" (l));
     switch (op) {
-        case '+': return add_op;
-        case '-': return sub_op;
-        case '*': return mul_op;
-        return div_op;
+        case '+': asm("addl %0, %%ebx; movl %%ebx, %%eax;" : : "r" (r)); break;
+        case '-': asm("subl %0, %%ebx; movl %%ebx, %%eax;" : : "r" (r)); break;
+        case '*': asm("imul %0, %%ebx; movl %%ebx, %%eax;" : : "r" (r)); break;
+		default: asm("movl %0, %%ecx; movl %%ebx, %%eax; cdq; idiv %%ecx;" : : "r" (r));
     }
 }
 
@@ -115,7 +109,7 @@ int parse_bin(int(*parse_higher_prec_expr)(void), TokenKind ops[], size_t num_op
         char op = token.kind;
         next_token();
         int rval = parse_higher_prec_expr();
-        val = op_func(op)(val, rval);
+        val = apply_op(op, val, rval);
     }
     return val;
 }
@@ -150,6 +144,7 @@ int main(void) {
     ASSERT_EXPR(2 * 3 + 4 * 5);
     ASSERT_EXPR(2 + -3);
     ASSERT_EXPR(2 * (3 + 4) * 5);
+    ASSERT_EXPR(4 / 2);
 
     return 0;
 }
