@@ -89,7 +89,7 @@ bool token_is_one_of(TokenKind kinds[], size_t num_tokens) {
 // IMPORTANT(stefanos): GCC-ONLY!!!!!!
 // return the operator function depending on the operator
 int apply_op(char op, int l, int r) {
-	asm("movl %0, %%ebx;" : : "l" (l));
+    asm("movl %0, %%ebx;" : : "l" (l));
     switch (op) {
         case '+': asm("addl %0, %%ebx; movl %%ebx, %%eax;" : : "r" (r)); break;
         case '-': asm("subl %0, %%ebx; movl %%ebx, %%eax;" : : "r" (r)); break;
