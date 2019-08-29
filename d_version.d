@@ -81,9 +81,6 @@ enum PREC { __INIT, LOWEST, ADD, MUL, FACTOR };
 
 immutable prec = () {
     import std.traits;
-    // Obviously you don't merge tokens and characters
-    // to avoid such situations. We can't take the 
-    // diff of the last - first in TOK.
     enum TOK_length = TOK.__LAST - TOK.EOF + 1;
     PREC[TOK_length] table;
 
