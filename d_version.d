@@ -260,7 +260,7 @@ void assert_expr(string expr)() {
     expect_token(TOK.EOF);
 }
 
-void main() {
+void run() {
     assert_expr!(q{1 + 2})();
     assert_expr!(q{(1 + 2 + 3})();  // error
     assert_expr!(q{3})();
@@ -271,3 +271,5 @@ void main() {
     assert_expr!(q{2 * (3 + 4) * 5})();
     assert_expr!(q{4 / 2})();
 }
+
+extern(C) int main() { run(); return 0; }
