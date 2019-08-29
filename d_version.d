@@ -30,6 +30,18 @@ enum TOK {
     __LAST = DIV
 };
 
+immutable const(char)*[] token_names = [
+    TOK.EOF:  "End of File",
+    TOK.INT:  "int constant",
+    TOK.NAME: "name",
+    TOK.MUL:  "*",
+    TOK.LPAR: "(",
+    TOK.RPAR: ")",
+    TOK.ADD:  "+",
+    TOK.SUB:  "-",
+    TOK.DIV:  "/"
+];
+
 struct Token {
     TOK kind;
     // `start`, `end` if you want
@@ -87,6 +99,39 @@ immutable prec = () {
 Token token;
 const(char)* stream;
 
+@nogc:
+nothrow:
+
+private:
+
+import core.stdc.stdio : printf;
+
+void _log(string s) {
+    printf("%s", s.ptr);
+}
+
+void _log(const(char) *s) {
+    printf("%s", s);
+}
+
+void _log(TOK kind) {
+    print_token(kind);
+}
+
+void log(A...)(A a)
+{
+	static foreach(t; a){
+		_log(t);
+	}
+    printf("\n");
+}
+
+void print_token(TOK kind) {
+    printf("\x1b[1m");  // bold on
+    printf("`%s`", token_names[kind]);
+    printf("\033[0m");  // bold off
+}
+
 // Put the next token to the global 'token'
 void next_token() {
     // skip whitespace
@@ -139,12 +184,12 @@ bool match_token(TOK kind) {
     }
 }
 
-bool expect_token(TOK kind) {
+void expect_token(TOK kind) {
     if (is_token(kind)) {
         next_token();
-        return true;
+    } else {
+        log("Expected ", kind, ", got ", token.kind);
     }
-    assert(0);
 }
 
 int parse_uint_par() {
@@ -156,7 +201,10 @@ int parse_uint_par() {
         val = parse_expr();
         expect_token(TOK.RPAR);
     } else {
-        assert(0, "Expected integer constant or `(`, got: ");
+        log("Expected integer constant or `(`, got: ", token.kind);
+        // One can go this one step further and create a `skip_tokens`
+        // function that will skip tokens until it finds one that
+        // that starts a <uint_par>
     }
     return val;
 }
@@ -208,15 +256,18 @@ void assert_expr(string expr)() {
     stream = expr.ptr;
     next_token();
     int res = parse_expr();
-    assert(res == mixin(expr));
-    assert(token.kind == TOK.EOF);
+    // `mixin` is cool to use here
+    // but since we want to have exprs
+    // with errors, the `mixin` will catch them.
+    //assert(res == mixin(expr));
+    expect_token(TOK.EOF);
 }
 
 void main() {
     assert_expr!(q{1 + 2})();
-    assert_expr!(q{(1 + 2) + 3})();
+    assert_expr!(q{(1 + 2 + 3})();  // error
     assert_expr!(q{3})();
-    assert_expr!(q{(4)})();
+    assert_expr!(q{4)})();
     assert_expr!(q{1 - 2 - 3})();
     assert_expr!(q{2 * 3 + 4 * 5})();
     assert_expr!(q{2 + -3})();
