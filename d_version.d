@@ -6,22 +6,28 @@
 /*
 Grammar:
 <uint_par> = UINT | "(" <expr> ")"
-<un_minus> = ["-"], <uint_par>
+<un_minus> = ["-"], <uint_par>  // also `factor`
 <bin_mul_div> = <un_minus> { ("*" | "/") } <un_minus>
 <bin_add_sub> = <bin_mul_div> { ("+" | "-") } <bin_mul_div>
 <expr> = <bin_add_sub>
 */
 
+
+// Note: These should be ordered in ascending order
+// depending on their ASCII value.
+// Obviously, you shoud not merge tokens and characters
+// to avoid such situations.
 enum TOK {
     EOF,
     INT,
     NAME,
-    ADD = '+',
-    SUB = '-',
     MUL = '*',
-    DIV = '/',
     LPAR = '(',
     RPAR = ')',
+    ADD = '+',
+    SUB = '-',
+    DIV = '/',
+    __LAST = DIV
 };
 
 struct Token {
@@ -56,6 +62,25 @@ immutable charmap = () {
         default:
         }
     }
+    return table;
+}();
+
+enum PREC { __INIT, LOWEST, ADD, MUL, FACTOR };
+
+immutable prec = () {
+    import std.traits;
+    // Obviously you don't merge tokens and characters
+    // to avoid such situations. We can't take the 
+    // diff of the last - first in TOK.
+    enum TOK_length = TOK.__LAST - TOK.EOF + 1;
+    PREC[TOK_length] table;
+
+    table[TOK.ADD] = PREC.ADD;
+    table[TOK.SUB] = PREC.ADD;
+
+    table[TOK.MUL] = PREC.MUL;
+    table[TOK.DIV] = PREC.MUL;
+
     return table;
 }();
 
@@ -155,34 +180,28 @@ auto get_op_func(TOK op)
     }
 }
 
-// NOTE(stefanos): A sort of functional style, with higher-order functions.
-// Call a higher precedence function to parse the lhs. Then
-// possibly parse a binary operator. Parse the rhs. Based on the op,
-// take the appropriate lambda and call it to get a val.
-int parse_bin(int function() parse_higher_prec_expr, TOK[] ops) {
-    import std.algorithm : canFind;
-    int val = parse_higher_prec_expr();
-    while (ops.canFind(token.kind)) {
+// Since all binary expressions have the same pattern,
+// we do something even simpler than the previous version
+// which is we track the operator precedence in a table.
+// Then, we can parse_bin() again as the "higher_prec_function"
+// with incremented precedence.
+// This is based on the precedence climbing technique.
+int parse_bin(int precedence) {
+    if (precedence == PREC.FACTOR) {
+        return parse_un_minus();
+    }
+    int val = parse_bin(precedence + 1);
+    while (prec[token.kind] == precedence) {
         TOK op = token.kind;
         next_token();
-        int rval = parse_higher_prec_expr();
+        int rval = parse_bin(precedence + 1);
         val = get_op_func(op)(val, rval);
     }
     return val;
 }
 
-int parse_bin_mul_add() {
-    TOK[] ops = [ TOK.MUL, TOK.DIV ];
-    return parse_bin(&parse_un_minus, ops);
-}
-
-int parse_bin_add_sub() {
-    TOK[] ops = [ TOK.ADD, TOK.SUB ];
-    return parse_bin(&parse_bin_mul_add, ops);
-}
-
 int parse_expr() {
-    return parse_bin_add_sub();
+    return parse_bin(PREC.LOWEST);
 }
 
 void assert_expr(string expr)() {
